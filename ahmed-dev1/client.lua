@@ -1,9 +1,7 @@
 local lastHealth = 200
 local lastArmor  = 0
 
--- Keep a one-frame-old snapshot of health/armor so we can
--- reverse the damage the game engine just applied and replace
--- it with our computed value.
+
 CreateThread(function()
     while true do
         local ped = PlayerPedId()
@@ -36,7 +34,6 @@ local function isHeadshot(ped)
 end
 
 local function applyDamage(ped, rawDamage)
-    -- Armor soaks damage 1:1 first, then health
     local dmg   = math.floor(rawDamage + 0.5)
     local armor = lastArmor
     local hp    = lastHealth
@@ -77,20 +74,17 @@ AddEventHandler('gameEventTriggered', function(name, data)
     if Config.IgnoreSelfDamage and victim == attacker then return end
     if not DoesEntityExist(attacker) then return end
 
-    -- Allow NPC attackers only if the config flag is on
     if IsEntityAPed(attacker) and not IsPedAPlayer(attacker) and not Config.ApplyToNPCAttackers then
         return
     end
 
     local wcfg = getWeaponConfig(weapon)
 
-    -- Base damage
     local damage = wcfg.body
     if isHeadshot(ped) then
         damage = damage * wcfg.headshotMultiplier
     end
 
-    -- Linear range falloff (only if the weapon defines it)
     if wcfg.falloffStart then
         local dist = #(GetEntityCoords(ped) - GetEntityCoords(attacker))
         if dist > wcfg.falloffStart then
@@ -103,8 +97,6 @@ AddEventHandler('gameEventTriggered', function(name, data)
     applyDamage(ped, damage)
 end)
 
--- Block GTA's built-in random-critical headshot instakill so that
--- our headshotMultiplier is the single source of truth.
 CreateThread(function()
     while true do
         SetPedSuffersCriticalHits(PlayerPedId(), false)
